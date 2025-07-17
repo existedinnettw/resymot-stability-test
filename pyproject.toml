@@ -1,0 +1,18 @@
+[project]
+name = "resymot-stress-test"
+version = "0.1.0"
+description = "Ansible-based stress testing framework for Resymot applications"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "ansible>=6.0.0",
+    "requests>=2.28.0",
+    "pyyaml>=6.0"
+]
+
+[project.scripts]
+resymot-stress = "main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

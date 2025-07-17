@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# CPU stress script with lower priority
+# This script will maximize CPU usage with lower scheduling priority
+
+# Set process to lowest priority
+renice 19 $$
+
+# Function to get number of CPU cores
+get_cpu_cores() {
+    nproc
+}
+
+# Function to create CPU load
+cpu_load() {
+    while true; do
+        # Create mathematical operations to consume CPU
+        echo "scale=5000; 4*a(1)" | bc -l > /dev/null 2>&1
+    done
+}
+
+# Main execution
+CPU_CORES=$(get_cpu_cores)
+echo "Starting CPU stress test on $CPU_CORES cores with low priority"
+echo "Started at: $(date)"
+
+# Start background processes for each CPU core
+for ((i=1; i<=CPU_CORES; i++)); do
+    cpu_load &
+    PIDS+=($!)
+    echo "Started CPU stress process $i with PID ${PIDS[$((i-1))]}"
+done
+
+# Function to cleanup on exit
+cleanup() {
+    echo "Stopping CPU stress test..."
+    for pid in "${PIDS[@]}"; do
+        kill $pid 2>/dev/null
+    done
+    echo "CPU stress test stopped at: $(date)"
+    exit 0
+}
+
+# Set trap for cleanup
+trap cleanup SIGTERM SIGINT
+
+# Wait for processes and restart if they die
+while true; do
+    for i in "${!PIDS[@]}"; do
+        if ! kill -0 ${PIDS[$i]} 2>/dev/null; then
+            echo "Restarting CPU stress process $((i+1))"
+            cpu_load &
+            PIDS[$i]=$!
+        fi
+    done
+    sleep 10
+done

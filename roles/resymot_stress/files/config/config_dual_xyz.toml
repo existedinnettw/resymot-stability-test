@@ -1,0 +1,196 @@
+# assume ethercat pdo config will not change, even need to change mode.
+# all the ethercat slaves on bus need to put here, even unused.
+[ethercat]
+    # which indexed slave is drive?
+    [ethercat.slave_0]
+        ESI_file_path = "../tmp/VEINAR_VS600B4_Driver_NoSlot_18.xml"
+        enable_dc     = false
+        virtual       = false
+        [ethercat.slave_0.pdo_0]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1600
+            "RxPDO_map_values" = [0x604000, 0x607a00, 0x60ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A00
+            "TxPDO_map_values" = [
+                0x603f00,
+                0x604100,
+                0x606400,
+                0x606C00,
+                0x60f400,
+            ]
+        [ethercat.slave_0.pdo_1]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1610
+            "RxPDO_map_values" = [0x684000, 0x687a00, 0x68ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A10
+            "TxPDO_map_values" = [
+                0x683f00,
+                0x684100,
+                0x686400,
+                0x686C00,
+                0x68f400,
+            ]
+        [ethercat.slave_0.pdo_2]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1620
+            "RxPDO_map_values" = [0x704000, 0x707a00, 0x70ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A20
+            "TxPDO_map_values" = [
+                0x703f00,
+                0x704100,
+                0x706400,
+                0x706C00,
+                0x70f400,
+            ]
+        [ethercat.slave_0.pdo_3]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1630
+            "RxPDO_map_values" = [0x784000, 0x787a00, 0x78ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A30
+            "TxPDO_map_values" = [
+                0x783f00,
+                0x784100,
+                0x786400,
+                0x786C00,
+                0x78f400,
+            ]
+        [ethercat.slave_0.pdo_4]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1640
+            "RxPDO_map_values" = [0x804000, 0x807a00, 0x80ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A40
+            "TxPDO_map_values" = [
+                0x803f00,
+                0x804100,
+                0x806400,
+                0x806C00,
+                0x80f400,
+            ]
+    [ethercat.slave_1]
+        ESI_file_path = "../tmp/IM_S16_manual_add_OD.xml"
+        virtual       = false
+        [ethercat.slave_1.pdo_0]
+            "RxPDO_assign"     = 0x1c12
+            "RxPDO_map"        = 0x1600
+            "RxPDO_map_values" = [0x320101, 0x320102, 0x320103, 0x320104]
+            "TxPDO_assign"     = 0x1c13
+            "TxPDO_map"        = 0x1A00
+            "TxPDO_map_values" = [0x310101, 0x310102, 0x310103, 0x310104]
+    [ethercat.slave_2]
+        ESI_file_path = "../tmp/HDT_TomCatEvo_Ethercat_V4.xml"
+        enable_dc     = false
+        virtual       = false
+        [ethercat.slave_2.pdo_0]
+            "RxPDO_assign" = 0x1c12
+            "RxPDO_map" = 0x1600
+            "RxPDO_map_values" = [0x604000, 0x607a00, 0x60ff00]
+            "TxPDO_assign" = 0x1c13
+            "TxPDO_map" = 0x1A00
+            "TxPDO_map_values" = [
+                0x603f00,
+                0x604100,
+                0x606400,
+                0x606C00,
+                0x60f400,
+            ]
+
+
+# mapping drive to ethercat device
+[drives]
+    [drives.1]
+        ecat_order    = 0
+        profile_order = 0
+        [drives.1.webots]
+    [drives.2]
+        ecat_order    = 0
+        profile_order = 1
+    [drives.3]
+        ecat_order    = 0
+        profile_order = 2
+    [drives.4]
+        ecat_order    = 0
+        profile_order = 3
+    [drives.5]
+        ecat_order    = 0
+        profile_order = 4
+    [drives.6]
+        ecat_order    = 2
+        profile_order = 0
+[ios]
+    [ios.1]
+        ecat_order    = 1
+        profile_order = 0
+
+[engine_parameters]
+    tick_period = 1e-3
+
+
+[XYZ_axes]
+    [XYZ_axes.1]
+        [XYZ_axes.1.machine_parameter]
+            # folowing values are dimensionless, just keep consitent across all program.
+            error_bound      = 9.6e-3
+            max_acceleration = 3.5
+            max_jerk         = 24
+            max_speed        = 1.0
+        [XYZ_axes.1.kinematic]
+            x_dir    = 1
+            x_offset = 0
+            y_dir    = 1
+            y_offset = 0
+            z_dir    = 1
+            z_offset = 0
+        [XYZ_axes.1.axis_x]
+            [XYZ_axes.1.axis_x.pos_only]
+                drive_order       = 1
+                enc_offset        = -6
+                ratio_denominator = 1310720
+                ratio_numerator   = 1
+        [XYZ_axes.1.axis_y]
+            [XYZ_axes.1.axis_y.pos_only]
+                drive_order       = 2
+                enc_offset        = -4
+                ratio_denominator = 1310720
+                ratio_numerator   = 1
+        [XYZ_axes.1.axis_z]
+            [XYZ_axes.1.axis_z.pos_only]
+                drive_order       = 3
+                enc_offset        = -27688
+                ratio_denominator = 1310720
+                ratio_numerator   = 1
+    [XYZ_axes.2]
+        [XYZ_axes.2.machine_parameter]
+            error_bound      = 9.6e-3
+            max_acceleration = 3.5
+            max_jerk         = 24
+            max_speed        = 1.0
+        [XYZ_axes.2.kinematic]
+            x_dir    = 1
+            x_offset = 0
+            y_dir    = 1
+            y_offset = 0
+            z_dir    = 1
+            z_offset = 0
+        [XYZ_axes.2.axis_x]
+            [XYZ_axes.2.axis_x.pos_only]
+                drive_order       = 4
+                enc_offset        = 0
+                ratio_denominator = 1310720
+                ratio_numerator   = 1
+        [XYZ_axes.2.axis_y]
+            [XYZ_axes.2.axis_y.pos_only]
+                drive_order       = 5
+                enc_offset        = 0
+                ratio_denominator = 1310720
+                ratio_numerator   = 1
+        [XYZ_axes.2.axis_z]
+            [XYZ_axes.2.axis_z.pos_only]
+                drive_order       = 6
+                enc_offset        = 0
+                ratio_denominator = 655360
+                ratio_numerator   = 1

@@ -1,0 +1,77 @@
+---
+- name: Stop monitoring and tests on control node first
+  hosts: localhost
+  connection: local
+  
+  tasks:
+    - name: Stop system monitoring processes
+      shell: |
+        if [ -f ./logs/{{ item }}_monitor.pid ]; then
+          echo "Killing monitoring process $(cat ./logs/{{ item }}_monitor.pid)"
+          kill $(cat ./logs/{{ item }}_monitor.pid) 2>/dev/null || true
+          rm -f ./logs/{{ item }}_monitor.pid
+        fi
+        # Kill any remaining monitoring processes using multiple methods
+        pkill -f "while true; do date; top -b -n 1; sleep" || true
+        pkill -f "ssh.*while true" || true
+        pkill -f "ssh.*top -b" || true
+      loop: "{{ groups['stress_test_nodes'] }}"
+      ignore_errors: yes
+      timeout: 10
+
+    - name: Stop unit test process
+      shell: |
+        if [ -f ./logs/unit_tests.pid ]; then
+          echo "Killing unit test process $(cat ./logs/unit_tests.pid)"
+          kill $(cat ./logs/unit_tests.pid) 2>/dev/null || true
+          sleep 1
+          kill -9 $(cat ./logs/unit_tests.pid) 2>/dev/null || true
+          rm -f ./logs/unit_tests.pid
+        fi
+        # Kill any remaining xyz_unittest processes
+        pkill -f "xyz_unittests" || true
+        pkill -9 -f "xyz_unittests" || true
+      ignore_errors: yes
+      timeout: 15
+
+- name: Stop Resymot Stress Test on target nodes
+  hosts: stress_test_nodes
+  become: yes
+  
+  tasks:
+    - name: Kill any remaining resymot processes (AppImage)
+      shell: |
+        echo "Stopping resymot processes on $(hostname)..."
+        pkill -f "resymot" || echo "No resymot processes found"
+        sleep 1
+        pkill -9 -f "resymot" || echo "No resymot processes to force kill"
+        echo "Resymot cleanup completed on $(hostname)"
+      ignore_errors: yes
+      timeout: 15
+
+    - name: Kill any remaining CPU stress processes
+      shell: |
+        echo "Stopping CPU stress processes on $(hostname)..."
+        pkill -f "cpu_stress" || echo "No cpu_stress processes found"
+        sleep 1
+        pkill -9 -f "cpu_stress" || echo "No cpu_stress processes to force kill" 
+        echo "CPU stress cleanup completed on $(hostname)"
+      ignore_errors: yes
+      timeout: 15
+
+    - name: Display cleanup information
+      debug:
+        msg: |
+          Stress test has been stopped.
+          
+          The following processes have been terminated:
+          1. System monitoring processes (sh -c while true; do date; top -b -n 1; sleep)
+          2. Unit test processes (xyz_unittests)
+          3. Resymot server processes (resymot-armv7.AppImage)
+          4. CPU stress processes
+          
+          Log files are preserved in ./logs/ directory:
+          {% for node in groups['stress_test_nodes'] %}
+          - {{ node }}_system_log.txt
+          {% endfor %}
+          - unit_tests.log

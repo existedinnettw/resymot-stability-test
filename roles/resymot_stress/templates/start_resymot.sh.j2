@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# Resymot startup script
+# resymot.appimage is available in PATH
+
+# Source profile to get proper PATH
+if [ -f /root/.profile ]; then
+    . /root/.profile
+fi
+
+# Set environment variables if needed
+export DISPLAY=:0
+
+# Set config directory
+export RESYMOT_CONFIG_DIR="/etc/resymot/config/config_dual_xyz.toml"
+
+# Function to check if resymot is already running
+check_resymot_running() {
+    # Check if resymot process is running
+    if pgrep -f "resymot-armv7.AppImage" >/dev/null 2>&1; then
+        echo "Resymot process is already running (PID: $(pgrep -f 'resymot-armv7.AppImage'))"
+        return 0
+    fi
+    
+    # Check if port {{ resymot_port }} is in use
+    if ss -tulpn | grep ":{{ resymot_port }}" >/dev/null 2>&1; then
+        echo "Port {{ resymot_port }} is already in use"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Check if resymot is already running
+echo "Checking if resymot is already running..."
+if check_resymot_running; then
+    echo "Resymot is already running. Exiting without starting a new instance."
+    exit 0
+fi
+
+# Start resymot (available in PATH)
+echo "Starting resymot at $(date)"
+echo "Config directory: $RESYMOT_CONFIG_DIR"
+
+# Check if resymot is available in PATH
+if command -v resymot-armv7.AppImage >/dev/null 2>&1; then
+    echo "Found resymot-armv7.AppImage in PATH"
+    resymot-armv7.AppImage --appimage-extract-and-run --caf.scheduler.max-threads=2 -f ${RESYMOT_CONFIG_DIR} &
+else
+    echo "ERROR: resymot-armv7.AppImage not found in PATH!"
+    echo "PATH: $PATH"
+    exit 1
+fi
+
+# Wait for resymot to start
+sleep 4
+
+# Check if resymot started successfully
+if check_resymot_running; then
+    echo "Resymot started successfully!"
+    exit 0
+else
+    echo "ERROR: Failed to start resymot or it's not responding on port {{ resymot_port }}"
+    exit 1

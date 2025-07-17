@@ -1,0 +1,14 @@
+---
+# Staging environment specific variables
+# Override production defaults for testing
+
+# Shorter test duration for staging
+stress_duration_hours: 0.02  # 0.02 hours instead of 24 for staging
+
+# More frequent logging for debugging
+log_interval_seconds: 3    # Every 3 seconds instead of 5
+
+# Staging-specific settings
+debug_mode: true
+test_environment: "staging"
+log_level: "debug"

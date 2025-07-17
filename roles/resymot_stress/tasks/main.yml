@@ -1,0 +1,117 @@
+---
+- name: Create log directory
+  file:
+    path: "{{ log_dir }}"
+    state: directory
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0755'
+  tags:
+    - setup
+    - directories
+
+- name: Create resymot config directory
+  file:
+    path: "/etc/resymot/config"
+    state: directory
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0755'
+  tags:
+    - setup
+    - directories
+
+- name: Copy resymot config to managed node
+  copy:
+    src: "config/"
+    dest: "/etc/resymot/config/"
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0644'
+  tags:
+    - setup
+    - config
+
+- name: Create tmp directory for XML files
+  file:
+    path: "/etc/resymot/tmp"
+    state: directory
+    mode: '0755'
+  tags:
+    - setup
+    - config
+
+- name: Copy XML configuration files to managed node
+  copy:
+    src: "tmp/"
+    dest: "/etc/resymot/tmp/"
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0644'
+  tags:
+    - setup
+    - config
+
+- name: Create CPU stress script
+  template:
+    src: "cpu_stress.sh.j2"
+    dest: "{{ stress_script_path }}"
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0755'
+  tags:
+    - setup
+    - scripts
+
+- name: Create resymot startup script
+  template:
+    src: "start_resymot.sh.j2"
+    dest: "/tmp/start_resymot.sh"
+    owner: "{{ resymot_user }}"
+    group: "{{ resymot_user }}"
+    mode: '0755'
+  tags:
+    - setup
+    - scripts
+
+- name: Check if resymot is already running
+  shell: |
+    if pgrep -f "resymot" >/dev/null 2>&1; then
+      echo "running"
+    elif ss -tulpn | grep ":{{ resymot_port }}" >/dev/null 2>&1; then
+      echo "port_occupied"
+    else
+      echo "not_running"
+    fi
+  register: resymot_status
+  changed_when: false
+  tags:
+    - check
+    - status
+
+- name: Display resymot status
+  debug:
+    msg: |
+      Resymot status: {% if resymot_status.stdout == 'running' %}Already running (process found)
+      {% elif resymot_status.stdout == 'port_occupied' %}Port {{ resymot_port }} is occupied
+      {% else %}Not running{% endif %}
+  tags:
+    - check
+    - status
+
+- name: Display manual startup instructions
+  debug:
+    msg: |
+      Setup completed! To manually start the stress test:
+      
+      {% if resymot_status.stdout == 'not_running' %}1. Start Resymot server manually on port {{ resymot_port }}
+      2. Run CPU stress script: {{ stress_script_path }}
+      3. Or use the startup script: /tmp/start_resymot.sh
+      {% else %}1. Resymot is already running
+      2. Run CPU stress script: {{ stress_script_path }}
+      {% endif %}
+      
+      Log directory: {{ log_dir }}
+      Config directory: /etc/resymot/config
+  tags:
+    - setup

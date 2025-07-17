@@ -1,0 +1,38 @@
+---
+# Main stress test playbook - includes start, wait, and stop operations
+- name: Start Resymot Stress Test
+  import_playbook: start_stress_test.yml
+
+- name: Wait for stress test duration and then stop
+  hosts: stress_test_nodes
+  run_once: true
+  connection: local
+  vars:
+    test_duration_hours: "{{ stress_duration_hours | default(1) }}"
+    
+  tasks:
+    - name: Display stress test running information
+      debug:
+        msg: |
+          Stress test is now running for {{ test_duration_hours }} hours.
+          
+          The following processes are active:
+          1. System monitoring (sh -c while true; do date; top -b -n 1; sleep)
+          2. Unit tests (xyz_unittests)
+          3. Resymot server
+          4. CPU stress processes
+          
+          Waiting for {{ test_duration_hours }} hours before automatic cleanup...
+
+    - name: Wait for stress test duration to complete
+      pause:
+        seconds: "{{ (test_duration_hours | float * 3600) | int }}"
+        
+    - name: Display cleanup start message
+      debug:
+        msg: |
+          Test duration of {{ test_duration_hours }} hours completed.
+          Starting cleanup process...
+
+- name: Stop Resymot Stress Test
+  import_playbook: stop_stress_test.yml

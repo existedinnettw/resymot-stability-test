@@ -1,0 +1,12 @@
+---
+# Default variables for resymot_stress role
+resymot_user: "{{ ansible_user }}"
+log_dir: "/var/log/resymot-stress"
+stress_script_path: "/usr/local/bin/cpu_stress.sh"
+resymot_port: 8383
+stress_duration_hours: 24
+log_interval_seconds: 5
+
+# Unit test configuration
+unittest_executable: "/home/morgana/resymot/build/Debug/tests/xyz_unittests"
+resymot_base_url: "http://{{ ansible_host }}:{{ resymot_port }}"
