@@ -12,13 +12,13 @@ fi
 export DISPLAY=:0
 
 # Set config directory
-export RESYMOT_CONFIG_DIR="/etc/resymot/config/config_dual_xyz.toml"
+export RESYMOT_CONFIG_DIR="/tmp/resymot/config/config_dual_xyz.toml"
 
 # Function to check if resymot is already running
 check_resymot_running() {
     # Check if resymot process is running
-    if pgrep -f "resymot-armv7.AppImage" >/dev/null 2>&1; then
-        echo "Resymot process is already running (PID: $(pgrep -f 'resymot-armv7.AppImage'))"
+    if pgrep -f "resymot.AppImage" >/dev/null 2>&1; then
+        echo "Resymot process is already running (PID: $(pgrep -f 'resymot.AppImage'))"
         return 0
     fi
     
@@ -43,11 +43,11 @@ echo "Starting resymot at $(date)"
 echo "Config directory: $RESYMOT_CONFIG_DIR"
 
 # Check if resymot is available in PATH
-if command -v resymot-armv7.AppImage >/dev/null 2>&1; then
-    echo "Found resymot-armv7.AppImage in PATH"
-    resymot-armv7.AppImage --appimage-extract-and-run --caf.scheduler.max-threads=2 -f ${RESYMOT_CONFIG_DIR} &
+if command -v resymot.AppImage >/dev/null 2>&1; then
+    echo "Found resymot.AppImage in PATH"
+    resymot.AppImage --appimage-extract-and-run --caf.scheduler.max-threads=2 -f ${RESYMOT_CONFIG_DIR} &
 else
-    echo "ERROR: resymot-armv7.AppImage not found in PATH!"
+    echo "ERROR: resymot.AppImage not found in PATH!"
     echo "PATH: $PATH"
     exit 1
 fi

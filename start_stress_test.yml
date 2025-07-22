@@ -1,9 +1,10 @@
 ---
 - name: Resymot Stress Test Playbook
   hosts: stress_test_nodes
-  become: yes
+  become: yes #sudo
   roles:
     - resymot_stress
+    # - { role: resymot_stress, tags: ['setup', 'stress'] }
 
 - name: Start monitoring and unit tests on control node
   hosts: localhost
@@ -11,7 +12,6 @@
   vars:
     test_duration_hours: "{{ hostvars[groups['stress_test_nodes'][0]]['stress_duration_hours'] }}"
     unittest_executable: "/home/morgana/resymot/build/Debug/tests/xyz_unittests"
-    stress_script_path: "/usr/local/bin/cpu_stress.sh"
     
   tasks:
     - name: Create local log directory
@@ -33,7 +33,7 @@
     - name: Start Resymot server on target nodes
       shell: |
         ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
-        "sh /tmp/start_resymot.sh > /var/log/resymot-stress/resymot_startup.log 2>&1 &"
+        "sudo sh /tmp/start_resymot.sh > {{ log_dir }}/resymot_startup.log 2>&1 &"
       loop: "{{ groups['stress_test_nodes'] }}"
 
     - name: Wait for Resymot server to be ready
@@ -44,8 +44,8 @@
       register: resymot_health
       until: resymot_health is not failed
       retries: 3
-      delay: 3
-      ignore_errors: yes
+      delay: 2
+      ignore_errors: no
 
     - name: Wait for drives in Resymot server switch to disabled
       pause:
@@ -53,7 +53,7 @@
 
     - name: Start unit tests using actual xyz_unittests executable
       shell: |
-        nohup {{ unittest_executable }} --gtest_filter=-*jog_test:*home_test --gtest_repeat=-1 --gtest_throw_on_failure > ./logs/unit_tests.log 2>&1 &
+        nohup {{ unittest_executable }} --gtest_filter=-*home_test --gtest_repeat=-1 > ./logs/unit_tests.log 2>&1 &
         echo $! > ./logs/unit_tests.pid
       environment:
         RESYMOT_URL: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"

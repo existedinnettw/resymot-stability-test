@@ -5,8 +5,8 @@ all:
       hosts:
         # Staging environment - using same node as production but with different settings
         node1-staging:
-          ansible_host: 192.168.0.246
-          ansible_user: root
+          ansible_host: 10.147.17.128
+          ansible_user: alex
           ansible_ssh_private_key_file: ~/.ssh/id_rsa
         # Additional staging nodes would go here
         # staging-node2:

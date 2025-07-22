@@ -12,7 +12,7 @@
 
 - name: Create resymot config directory
   file:
-    path: "/etc/resymot/config"
+    path: "/tmp/resymot/config"
     state: directory
     owner: "{{ resymot_user }}"
     group: "{{ resymot_user }}"
@@ -24,7 +24,7 @@
 - name: Copy resymot config to managed node
   copy:
     src: "config/"
-    dest: "/etc/resymot/config/"
+    dest: "/tmp/resymot/config/"
     owner: "{{ resymot_user }}"
     group: "{{ resymot_user }}"
     mode: '0644'
@@ -34,7 +34,7 @@
 
 - name: Create tmp directory for XML files
   file:
-    path: "/etc/resymot/tmp"
+    path: "/tmp/resymot/tmp"
     state: directory
     mode: '0755'
   tags:
@@ -44,7 +44,7 @@
 - name: Copy XML configuration files to managed node
   copy:
     src: "tmp/"
-    dest: "/etc/resymot/tmp/"
+    dest: "/tmp/resymot/tmp/"
     owner: "{{ resymot_user }}"
     group: "{{ resymot_user }}"
     mode: '0644'
@@ -112,6 +112,6 @@
       {% endif %}
       
       Log directory: {{ log_dir }}
-      Config directory: /etc/resymot/config
+      Config directory: /tmp/resymot/config
   tags:
     - setup
