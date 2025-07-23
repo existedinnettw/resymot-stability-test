@@ -17,11 +17,11 @@ export RESYMOT_CONFIG_DIR="/tmp/resymot/config/config_dual_xyz.toml"
 # Function to check if resymot is already running
 check_resymot_running() {
     # Check if resymot process is running
-    pgrep -f "resymot.AppImage" >/dev/null 2>&1
+    pgrep -x "resymot.AppImage" >/dev/null 2>&1
     local pgrep_status=$?
     echo "pgrep exit code: $pgrep_status"
     if [ $pgrep_status -eq 0 ]; then
-        echo "Resymot process is already running (PID: $(pgrep -f 'resymot.AppImage'))"
+        echo "Resymot process is already running (PID: $(pgrep -x 'resymot.AppImage'))"
         return 0
     elif [ $pgrep_status -eq 1 ]; then
         echo "No resymot process found."

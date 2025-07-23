@@ -14,42 +14,68 @@
     unittest_executable: "/home/morgana/resymot/build/Debug/tests/xyz_unittests"
     
   tasks:
+    - name: Init stress_test_start_success to true
+      set_fact:
+        stress_test_start_success: true
     - name: Create local log directory
       file:
         path: "./logs"
         state: directory
         mode: '0755'
 
-    - name: Start system monitoring for each node
-      shell: |
-        nohup ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
-        "while true; do date -Iseconds; top -b -n 1 | egrep 'CPU|Cpu|Mem' | grep -v '^[ 0-9]'; echo; sleep {{ hostvars[item]['log_interval_seconds'] }}; done" \
-        > ./logs/{{ item }}_system_log.txt 2>&1 &
-        echo $! > ./logs/{{ item }}_monitor.pid
-      loop: "{{ groups['stress_test_nodes'] }}"
-      async: 0
-      poll: 0
 
-    - name: Start Resymot server on target nodes
-      shell: |
-        ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
-        "sudo sh /tmp/start_resymot.sh > {{ log_dir }}/resymot_startup.log 2>&1 &"
-      loop: "{{ groups['stress_test_nodes'] }}"
+    - block:
+        - name: Start system monitoring for each node
+          shell: |
+            nohup ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} "
+              while true; do
+                date -Iseconds
+                echo '=== System ==='
+                top -b -n 1 | egrep 'CPU|Cpu|Mem' | grep -v '^[ 0-9]'
+                echo '=== resymot.AppImage ==='
+                cpu_sum=\$(top -b -n 1 | grep resymot | awk '{sum+=\$9} END {print sum}')
+                mem_kb=\$(top -b -n 1 | grep resymot | awk '{sum+=\$6} END {print sum}')
+                if [ -z \$cpu_sum ] && [ -z \$mem_kb ]; then
+                  echo 'resymot.AppImage not running'
+                else
+                  mem_mb=\$(echo \"scale=2; \$mem_kb/1024\" | bc)
+                  echo \"Total resymot.AppImage CPU: \$cpu_sum %\"
+                  echo \"Total resymot.AppImage Memory: \$mem_mb MB\"
+                fi
+                echo
+                sleep {{ hostvars[item]['log_interval_seconds'] }}
+              done
+            " > ./logs/{{ item }}_system_log.txt 2>&1 &
+            echo $! > ./logs/{{ item }}_monitor.pid
+          loop: "{{ groups['stress_test_nodes'] }}"
+          async: 0
+          poll: 0
 
-    - name: Wait for Resymot server to be ready
-      uri:
-        url: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"
-        method: GET
-        status_code: [200, 404]  # Accept 404 as server might be running but no endpoint
-      register: resymot_health
-      until: resymot_health is not failed
-      retries: 3
-      delay: 2
-      ignore_errors: no
+        - name: Start Resymot server on target nodes
+          shell: |
+            ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
+            "sudo sh /tmp/start_resymot.sh > {{ log_dir }}/resymot_startup.log 2>&1 &"
+          loop: "{{ groups['stress_test_nodes'] }}"
 
-    # - name: Wait for drives in Resymot server switch to disabled
-    #   pause:
-    #     seconds: 5
+        - name: Wait for Resymot server to be ready
+          uri:
+            url: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"
+            method: GET
+            status_code: [200, 404]
+          register: resymot_health
+          until: resymot_health is not failed
+          retries: 3
+          delay: 2
+          ignore_errors: no
+
+      rescue:
+        - name: Mark setup as failed
+          set_fact:
+            stress_test_start_success: false
+        - name: Log setup failure
+          debug:
+            msg: "Setup failed, skipping stress test and unit tests."
+
 
     - name: Start stress test on target nodes
       shell: |
@@ -58,6 +84,7 @@
       loop: "{{ groups['stress_test_nodes'] }}"
       async: 0
       poll: 0
+      when: stress_test_start_success | default(false)
 
     - name: Start unit tests using actual xyz_unittests executable
       shell: |
@@ -67,6 +94,7 @@
         RESYMOT_URL: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"
       async: 0
       poll: 0
+      when: stress_test_start_success | default(false)
 
     - name: Display stress test startup completed
       debug:
@@ -94,3 +122,13 @@
           3. Resymot server
           
           The stress test is now running and will be managed by the main playbook.
+      when: stress_test_start_success | default(false)
+
+    - name: Mark start as successful on all stress_test_nodes
+      set_fact:
+        stress_test_start_success: true
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      run_once: true
+      loop: "{{ groups['stress_test_nodes'] }}"
+      when: stress_test_start_success | default(false)

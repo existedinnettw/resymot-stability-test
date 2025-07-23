@@ -1,7 +1,5 @@
 ---
 # Variables for all stress test nodes
 resymot_port: 8383
-stress_duration_hours: 24
-log_interval_seconds: 5
-ansible_ssh_pipelining: false
-ansible_python_interpreter: /usr/bin/python3
+
+# precedence: stress_test_nodes.yml > staging.yml > all.yml
