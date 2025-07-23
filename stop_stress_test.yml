@@ -12,12 +12,22 @@
           rm -f ./logs/{{ item }}_monitor.pid
         fi
         # Kill any remaining monitoring processes using multiple methods
-        pkill -f "while true; do date; top -b -n 1; sleep" || true
-        pkill -f "ssh.*while true" || true
-        pkill -f "ssh.*top -b" || true
+        pkill -f "while true; do date; top -b -n 1; sleep"
+        pkill -f "ssh.*while true"
+        pkill -f "ssh.*top -b"
+      register: monitor_kill
+      failed_when: false
       loop: "{{ groups['stress_test_nodes'] }}"
       ignore_errors: yes
       timeout: 10
+    - name: Show pkill result for monitoring processes
+      debug:
+        msg: |
+          pkill exit code: {{ item.rc }}
+          stdout: {{ item.stdout }}
+          stderr: {{ item.stderr }}
+      loop: "{{ monitor_kill.results }}"
+      when: item.rc != 0
 
     - name: Stop unit test process
       shell: |
@@ -29,10 +39,19 @@
           rm -f ./logs/unit_tests.pid
         fi
         # Kill any remaining xyz_unittest processes
-        pkill -f "xyz_unittests" || true
-        pkill -9 -f "xyz_unittests" || true
+        pkill -f "xyz_unittests"
+        pkill -9 -f "xyz_unittests"
+      register: unittest_kill
+      failed_when: false
       ignore_errors: yes
       timeout: 15
+    - name: Show pkill result for unit test processes
+      debug:
+        msg: |
+          pkill exit code: {{ unittest_kill.rc }}
+          stdout: {{ unittest_kill.stdout }}
+          stderr: {{ unittest_kill.stderr }}
+      when: unittest_kill.rc != 0
 
 - name: Stop Resymot Stress Test on target nodes
   hosts: stress_test_nodes
@@ -42,22 +61,40 @@
     - name: Kill any remaining resymot processes (AppImage)
       shell: |
         echo "Stopping resymot processes on $(hostname)..."
-        pkill -f "resymot" || echo "No resymot processes found"
-        sleep 1
-        pkill -9 -f "resymot" || echo "No resymot processes to force kill"
+        pkill -f "resymot"
+        sleep 3
+        pkill -9 -f "resymot"
         echo "Resymot cleanup completed on $(hostname)"
+      register: resymot_kill
+      failed_when: false
       ignore_errors: yes
       timeout: 15
+    - name: Show pkill result for resymot processes
+      debug:
+        msg: |
+          pkill exit code: {{ resymot_kill.rc }}
+          stdout: {{ resymot_kill.stdout }}
+          stderr: {{ resymot_kill.stderr }}
+      when: resymot_kill.rc != 0
 
     - name: Kill any remaining CPU stress processes
       shell: |
         echo "Stopping CPU stress processes on $(hostname)..."
-        pkill -f "cpu_stress" || echo "No cpu_stress processes found"
+        pkill -f "cpu_stress"
         sleep 1
-        pkill -9 -f "cpu_stress" || echo "No cpu_stress processes to force kill" 
+        pkill -9 -f "cpu_stress"
         echo "CPU stress cleanup completed on $(hostname)"
+      register: cpustress_kill
+      failed_when: false
       ignore_errors: yes
       timeout: 15
+    - name: Show pkill result for CPU stress processes
+      debug:
+        msg: |
+          pkill exit code: {{ cpustress_kill.rc }}
+          stdout: {{ cpustress_kill.stdout }}
+          stderr: {{ cpustress_kill.stderr }}
+      when: cpustress_kill.rc != 0
 
     - name: Display cleanup information
       debug:

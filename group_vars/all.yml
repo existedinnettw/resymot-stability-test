@@ -3,3 +3,4 @@
 # Add any variables that apply to all hosts here
 
 log_dir: "/tmp/resymot/log/resymot-stress"
+stress_script_path: "/tmp/resymot/cpu_stress.sh"

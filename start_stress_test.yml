@@ -23,7 +23,7 @@
     - name: Start system monitoring for each node
       shell: |
         nohup ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
-        "while true; do date; top -b -n 1; sleep {{ hostvars[item]['log_interval_seconds'] }}; done" \
+        "while true; do date -Iseconds; top -b -n 1 | egrep 'CPU|Cpu|Mem' | grep -v '^[ 0-9]'; echo; sleep {{ hostvars[item]['log_interval_seconds'] }}; done" \
         > ./logs/{{ item }}_system_log.txt 2>&1 &
         echo $! > ./logs/{{ item }}_monitor.pid
       loop: "{{ groups['stress_test_nodes'] }}"
@@ -47,9 +47,17 @@
       delay: 2
       ignore_errors: no
 
-    - name: Wait for drives in Resymot server switch to disabled
-      pause:
-        seconds: 5
+    # - name: Wait for drives in Resymot server switch to disabled
+    #   pause:
+    #     seconds: 5
+
+    - name: Start stress test on target nodes
+      shell: |
+        ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
+        "nohup {{ stress_script_path }} --duration {{ test_duration_hours }} > {{ log_dir }}/{{ item }}_stress.log 2>&1 &"
+      loop: "{{ groups['stress_test_nodes'] }}"
+      async: 0
+      poll: 0
 
     - name: Start unit tests using actual xyz_unittests executable
       shell: |

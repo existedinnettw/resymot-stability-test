@@ -76,7 +76,10 @@
 
 - name: Check if resymot is already running
   shell: |
-    if pgrep -f "resymot" >/dev/null 2>&1; then
+    pgrep -f "resymot.AppImage"
+    pgrep_status=$?
+    echo "pgrep exit code: $pgrep_status"
+    if [ $pgrep_status -eq 0 ]; then
       echo "running"
     elif ss -tulpn | grep ":{{ resymot_port }}" >/dev/null 2>&1; then
       echo "port_occupied"
