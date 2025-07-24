@@ -19,7 +19,7 @@
         stress_test_start_success: true
     - name: Create local log directory
       file:
-        path: "./logs"
+        path: "{{ logs_path }}"
         state: directory
         mode: "0755"
 
@@ -44,8 +44,8 @@
                 echo
                 sleep {{ hostvars[item]['log_interval_seconds'] }}
               done
-            " > ./logs/{{ item }}_system_log.txt 2>&1 &
-            echo $! > ./logs/{{ item }}_monitor.pid
+            " > {{ logs_path }}/{{ item }}_system_log.txt 2>&1 &
+            echo $! > {{ logs_path }}/{{ item }}_monitor.pid
           loop: "{{ groups['stress_test_nodes'] }}"
           async: 0
           poll: 0
@@ -87,14 +87,16 @@
     - name: Run unit tests with custom log path and mach_id 1
       include_tasks: roles/resymot_stress/tasks/run_unittests.yml
       vars:
-        logs_path: "./logs"
+        # logs_path: "{{ logs_path }}"
         mach_id: 1
+      when: stress_test_start_success | default(false)
 
     - name: Run unit tests with custom log path and mach_id 2
       include_tasks: roles/resymot_stress/tasks/run_unittests.yml
       vars:
-        logs_path: "./logs"
+        # logs_path: "{{ logs_path }}"
         mach_id: 2
+      when: stress_test_start_success | default(false)
 
     - name: Display stress test startup completed
       debug:
@@ -103,15 +105,15 @@
 
           The Resymot server has been started and unit tests are now running.
 
-          Monitoring logs: ./logs/*_system_log.txt
-          Unit test logs: ./logs/unit_tests.log (running xyz_unittests)
-          Resymot startup logs: Check /var/log/resymot-stress/resymot_startup.log on target nodes
+          Monitoring logs: {{ logs_path }}/*_system_log.txt
+          Unit test logs: {{ logs_path }}/unit_tests.log (running xyz_unittests)
+          Resymot startup logs: Check {{ logs_path }}/resymot_startup.log on target nodes
 
           Process PIDs:
           {% for node in groups['stress_test_nodes'] %}
-          - {{ node }} monitoring: ./logs/{{ node }}_monitor.pid
+          - {{ node }} monitoring: {{ logs_path }}/{{ node }}_monitor.pid
           {% endfor %}
-          - Unit tests (xyz_unittests): ./logs/unit_tests.pid
+          - Unit tests (xyz_unittests): {{ logs_path }}/unit_tests.pid
 
           Unit test executable: {{ unittest_executable }}
           RESYMOT_URL: http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/

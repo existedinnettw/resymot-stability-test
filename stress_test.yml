@@ -1,7 +1,19 @@
 ---
 # Main stress test playbook - includes start, wait, and stop operations
+
+- hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: Generate a timestamp for the logs directory
+      set_fact:
+        logs_path: "./logs/{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
+      run_once: true  # Ensures this task runs only once, even with multiple hosts
+
 - name: Start Resymot Stress Test
   import_playbook: start_stress_test.yml
+  vars:
+    logs_path: "{{ logs_path }}"
   ignore_errors: yes
 
 - name: Wait for stress test duration and then stop
@@ -16,13 +28,13 @@
           debug:
             msg: |
               Stress test is now running for {{ test_duration_hours }} hours.
-              
+
               The following processes are active:
               1. System monitoring (sh -c while true; do date; top -b -n 1; sleep)
               2. Unit tests (xyz_unittests)
               3. Resymot server
               4. CPU stress processes
-              
+
               Waiting for {{ test_duration_hours }} hours before automatic cleanup...
         - name: Wait for stress test duration to complete
           pause:
@@ -36,3 +48,5 @@
 
 - name: Stop Resymot Stress Test
   import_playbook: stop_stress_test.yml
+  vars:
+    logs_path: "{{ logs_path }}"

@@ -1,8 +1,5 @@
 ---
 - name: Stop unit test process
-  vars:
-    logs_path: "./logs"
-    mach_id: 1
   shell: |
     if [ -f {{ logs_path }}/unit_tests{{ mach_id }}.pid ]; then
       echo "Killing unit test process $(cat {{ logs_path }}/unit_tests{{ mach_id }}.pid)"
