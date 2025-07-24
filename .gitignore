@@ -171,3 +171,4 @@ files/config/secrets*
 .vault_pass
 
 requirements.txt
+.vscode/settings.json

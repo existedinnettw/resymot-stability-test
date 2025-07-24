@@ -1,0 +1,4 @@
+[formatting]
+indent_arrays  = false
+indent_entries = false
+indent_tables  = false

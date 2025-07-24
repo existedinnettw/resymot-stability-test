@@ -1,0 +1,3 @@
+---
+stress_duration_hours: 24 # hours
+log_interval_seconds: 5 # Every x seconds

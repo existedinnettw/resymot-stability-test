@@ -3,10 +3,10 @@
 # Override production defaults for testing
 
 # Shorter test duration for staging
-stress_duration_hours: 0.01  # hours
+stress_duration_hours: 0.04 # hours
 
 # More frequent logging for debugging
-log_interval_seconds: 3    # Every 3 seconds instead of 5
+log_interval_seconds: 3 # Every 3 seconds instead of 5
 
 # Staging-specific settings
 debug_mode: true

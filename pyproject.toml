@@ -1,18 +1,42 @@
 [project]
-name = "resymot-stress-test"
-version = "0.1.0"
-description = "Ansible-based stress testing framework for Resymot applications"
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "ansible>=6.0.0",
+dependencies    = [
     "requests>=2.28.0",
-    "pyyaml>=6.0"
+ "pyyaml>=6.0",
+ "matplotlib>=3.10.3",
+ "numpy>=2.2.6",
 ]
+description     = "Ansible-based stress testing framework for Resymot applications"
+name            = "resymot-stress-test"
+readme          = "README.md"
+requires-python = ">=3.10"
+version         = "0.1.0"
 
-[project.scripts]
-resymot-stress = "main:main"
+[dependency-groups]
+dev = ["ruff>=0.11.12,<0.12", "pytest>=8.3.5,<9", "ansible>=6.0.0"]
 
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
+requires      = ["hatchling"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["log_analyzer"]
+
+[tool.ruff]
+exclude     = ["**/migrations/", "**/manage.py"]
+line-length = 100
+
+[tool.ruff.lint]
+ignore = [
+    "E402", # module level import not at top of file
+]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+]
+
+[tool.ruff.format]
+docstring-code-line-length = 100
+quote-style                = "double" # 引號風格，雙引號是預設值，這裡只是明示這個設定

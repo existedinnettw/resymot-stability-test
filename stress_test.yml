@@ -7,7 +7,7 @@
   tasks:
     - name: Generate a timestamp for the logs directory
       set_fact:
-        logs_path: "./logs/{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
+        logs_path: "./logs/{{ lookup('pipe', 'date -Iseconds') }}"
       run_once: true  # Ensures this task runs only once, even with multiple hosts
 
 - name: Start Resymot Stress Test
