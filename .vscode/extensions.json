@@ -3,6 +3,7 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "samuelcolvin.jinjahtml",
-        "redhat.ansible"
+        "redhat.ansible",
+        "redhat.vscode-yaml"
     ]
 }

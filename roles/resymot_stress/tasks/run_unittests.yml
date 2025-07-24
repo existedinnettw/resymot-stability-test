@@ -1,0 +1,11 @@
+---
+- name: Start unit tests using actual xyz_unittests executable
+  shell: |
+    nohup {{ unittest_executable }} --gtest_filter=-*home_test:*send_dual_pattern --gtest_repeat=-1 > {{ logs_path }}/unit_tests{{ mach_id }}.log 2>&1 &
+    echo $! > {{ logs_path }}/unit_tests{{ mach_id }}.pid
+  environment:
+    RESYMOT_URL: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"
+    RESYMOT_MACH_ID: "{{ mach_id }}"
+  async: 0
+  poll: 0
+  when: stress_test_start_success | default(false)

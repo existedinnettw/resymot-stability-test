@@ -12,7 +12,7 @@
   vars:
     test_duration_hours: "{{ hostvars[groups['stress_test_nodes'][0]]['stress_duration_hours'] }}"
     unittest_executable: "/home/morgana/resymot/build/Debug/tests/xyz_unittests"
-    
+
   tasks:
     - name: Init stress_test_start_success to true
       set_fact:
@@ -21,8 +21,7 @@
       file:
         path: "./logs"
         state: directory
-        mode: '0755'
-
+        mode: "0755"
 
     - block:
         - name: Start system monitoring for each node
@@ -76,7 +75,6 @@
           debug:
             msg: "Setup failed, skipping stress test and unit tests."
 
-
     - name: Start stress test on target nodes
       shell: |
         ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
@@ -86,41 +84,43 @@
       poll: 0
       when: stress_test_start_success | default(false)
 
-    - name: Start unit tests using actual xyz_unittests executable
-      shell: |
-        nohup {{ unittest_executable }} --gtest_filter=-*home_test --gtest_repeat=-1 > ./logs/unit_tests.log 2>&1 &
-        echo $! > ./logs/unit_tests.pid
-      environment:
-        RESYMOT_URL: "http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/"
-      async: 0
-      poll: 0
-      when: stress_test_start_success | default(false)
+    - name: Run unit tests with custom log path and mach_id 1
+      include_tasks: roles/resymot_stress/tasks/run_unittests.yml
+      vars:
+        logs_path: "./logs"
+        mach_id: 1
+
+    - name: Run unit tests with custom log path and mach_id 2
+      include_tasks: roles/resymot_stress/tasks/run_unittests.yml
+      vars:
+        logs_path: "./logs"
+        mach_id: 2
 
     - name: Display stress test startup completed
       debug:
         msg: |
           Stress test startup completed! 
-          
+
           The Resymot server has been started and unit tests are now running.
-          
+
           Monitoring logs: ./logs/*_system_log.txt
           Unit test logs: ./logs/unit_tests.log (running xyz_unittests)
           Resymot startup logs: Check /var/log/resymot-stress/resymot_startup.log on target nodes
-          
+
           Process PIDs:
           {% for node in groups['stress_test_nodes'] %}
           - {{ node }} monitoring: ./logs/{{ node }}_monitor.pid
           {% endfor %}
           - Unit tests (xyz_unittests): ./logs/unit_tests.pid
-          
+
           Unit test executable: {{ unittest_executable }}
           RESYMOT_URL: http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/
-          
+
           Active processes:
           1. System monitoring (sh -c while true; do date; top -b -n 1; sleep)
           2. Unit tests (xyz_unittests)
           3. Resymot server
-          
+
           The stress test is now running and will be managed by the main playbook.
       when: stress_test_start_success | default(false)
 

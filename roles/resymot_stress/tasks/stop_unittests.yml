@@ -1,0 +1,20 @@
+---
+- name: Stop unit test process
+  vars:
+    logs_path: "./logs"
+    mach_id: 1
+  shell: |
+    if [ -f {{ logs_path }}/unit_tests{{ mach_id }}.pid ]; then
+      echo "Killing unit test process $(cat {{ logs_path }}/unit_tests{{ mach_id }}.pid)"
+      kill $(cat {{ logs_path }}/unit_tests{{ mach_id }}.pid) 2>/dev/null || true
+      sleep 1
+      kill -9 $(cat {{ logs_path }}/unit_tests{{ mach_id }}.pid) 2>/dev/null || true
+      rm -f {{ logs_path }}/unit_tests{{ mach_id }}.pid
+    fi
+    # Kill any remaining xyz_unittest processes
+    pkill -f "xyz_unittests"
+    pkill -9 -f "xyz_unittests"
+  register: unittest_kill
+  failed_when: false
+  ignore_errors: true
+  timeout: 15

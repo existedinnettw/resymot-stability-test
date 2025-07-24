@@ -2,7 +2,7 @@
 - name: Stop monitoring and tests on control node first
   hosts: localhost
   connection: local
-  
+
   tasks:
     - name: Stop system monitoring processes
       shell: |
@@ -30,22 +30,26 @@
       when: item.rc != 0
 
     - name: Stop unit test process
-      shell: |
-        if [ -f ./logs/unit_tests.pid ]; then
-          echo "Killing unit test process $(cat ./logs/unit_tests.pid)"
-          kill $(cat ./logs/unit_tests.pid) 2>/dev/null || true
-          sleep 1
-          kill -9 $(cat ./logs/unit_tests.pid) 2>/dev/null || true
-          rm -f ./logs/unit_tests.pid
-        fi
-        # Kill any remaining xyz_unittest processes
-        pkill -f "xyz_unittests"
-        pkill -9 -f "xyz_unittests"
-      register: unittest_kill
-      failed_when: false
-      ignore_errors: yes
-      timeout: 15
+      include_tasks: roles/resymot_stress/tasks/stop_unittests.yml
+      vars:
+        logs_path: "./logs"
+        mach_id: 1
+
     - name: Show pkill result for unit test processes
+      debug:
+        msg: |
+          pkill exit code: {{ unittest_kill.rc }}
+          stdout: {{ unittest_kill.stdout }}
+          stderr: {{ unittest_kill.stderr }}
+      when: unittest_kill.rc != 0
+
+    - name: Stop unit test process (mach_id 2)
+      include_tasks: roles/resymot_stress/tasks/stop_unittests.yml
+      vars:
+        logs_path: "./logs"
+        mach_id: 2
+
+    - name: Show pkill result for unit test processes (mach_id 2)
       debug:
         msg: |
           pkill exit code: {{ unittest_kill.rc }}
@@ -56,7 +60,7 @@
 - name: Stop Resymot Stress Test on target nodes
   hosts: stress_test_nodes
   become: yes
-  
+
   tasks:
     - name: Kill any remaining resymot processes (AppImage)
       shell: |
@@ -100,13 +104,13 @@
       debug:
         msg: |
           Stress test has been stopped.
-          
+
           The following processes have been terminated:
           1. System monitoring processes (sh -c while true; do date; top -b -n 1; sleep)
           2. Unit test processes (xyz_unittests)
           3. Resymot server processes (resymot-armv7.AppImage)
           4. CPU stress processes
-          
+
           Log files are preserved in ./logs/ directory:
           {% for node in groups['stress_test_nodes'] %}
           - {{ node }}_system_log.txt
