@@ -30,18 +30,22 @@
               while true; do
                 date -Iseconds
                 echo '=== System ==='
-                top -b -n 1 | egrep 'CPU|Cpu|Mem' | grep -v '^[ 0-9]'
+                busybox top -b -n 1 | egrep 'CPU:|Mem:' | grep -v '^[ 0-9]'
                 echo '=== resymot.AppImage ==='
-                cpu_sum=\$(top -b -n 1 | grep resymot | awk '{sum+=\$9} END {print sum}')
-                mem_kb=\$(top -b -n 1 | grep resymot | awk '{sum+=\$6} END {print sum}')
-                if [ -z \$cpu_sum ] && [ -z \$mem_kb ]; then
+                cpu_sum=\$(busybox top -b -n 1 | grep resymot | awk '{sum+=\$6} END {print sum}')
+                mem_mb=\$(busybox ps -o pid,rss,comm | grep resymot | awk '
+                /m/ { mb = \$2; sub(/m/, "", mb); total_kb += mb * 1024; next }
+                    { kb = \$2; sub(/k/, "", kb); total_kb += kb }
+                END { printf "%.2f", total_kb / 1024 }
+                ')
+                if [ -z \$cpu_sum ] && [ -z \$mem_mb ]; then
                   echo 'resymot.AppImage not running'
                 else
-                  mem_mb=\$(echo \"scale=2; \$mem_kb/1024\" | bc)
-                  echo \"Total resymot.AppImage CPU: \$cpu_sum %\"
-                  echo \"Total resymot.AppImage Memory: \$mem_mb MB\"
+                  echo "Total resymot.AppImage CPU: \$cpu_sum %"
+                  echo "Total resymot.AppImage Memory: \$mem_mb MB"
                 fi
                 echo
+
                 sleep {{ hostvars[item]['log_interval_seconds'] }}
               done
             " > {{ logs_path }}/{{ item }}_system_log.txt 2>&1 &
@@ -53,7 +57,7 @@
         - name: Start Resymot server on target nodes
           shell: |
             ssh {{ hostvars[item]['ansible_user'] }}@{{ hostvars[item]['ansible_host'] }} \
-            "sudo sh /tmp/start_resymot.sh > {{ log_dir }}/resymot_startup.log 2>&1 &"
+            "{% if hostvars[item]['ansible_user'] != 'root' %}sudo {% endif %}sh /tmp/start_resymot.sh > {{ log_dir }}/resymot_startup.log 2>&1 &"
           loop: "{{ groups['stress_test_nodes'] }}"
 
         - name: Wait for Resymot server to be ready
@@ -65,7 +69,7 @@
           until: resymot_health is not failed
           retries: 3
           delay: 2
-          ignore_errors: no
+          ignore_errors: false
 
       rescue:
         - name: Mark setup as failed
@@ -119,7 +123,7 @@
           RESYMOT_URL: http://{{ hostvars[groups['stress_test_nodes'][0]]['ansible_host'] }}:{{ hostvars[groups['stress_test_nodes'][0]]['resymot_port'] }}/
 
           Active processes:
-          1. System monitoring (sh -c while true; do date; top -b -n 1; sleep)
+          1. System monitoring (sh -c while true; do date; busybox top -b -n 1; sleep)
           2. Unit tests (xyz_unittests)
           3. Resymot server
 

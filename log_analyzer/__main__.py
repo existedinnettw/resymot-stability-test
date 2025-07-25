@@ -34,12 +34,13 @@ def plot_pie_chart(passed_tests, failed_tests, output_dir):
     ax1.pie(sizes, explode=explode, labels=labels, autopct="%1.1f%%", shadow=True, startangle=90)
     ax1.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
 
-    plt.savefig(output_dir / "test_results.png")
+    plt.savefig(output_dir / "test_results.svg", format="svg")
 
 
 def parse_system_log(log_file):
     """
     Parses the system log file to extract CPU and memory usage for both system and resymot.
+    Handles multiple `top` output formats.
     """
     timestamps = []
     cpu_usage = []
@@ -50,7 +51,17 @@ def parse_system_log(log_file):
     with open(log_file, "r") as f:
         content = f.read()
 
-    entries = re.split(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2})", content)
+    # Regex for the first format: %Cpu(s): 12.2 us,  7.6 sy,  0.0 ni, 80.2 id...
+    cpu_format1_re = re.compile(r"%Cpu\(s\):.*,\s+([\d\.]+) id,\s+([\d\.]+) wa")
+    mem_format1_re = re.compile(
+        r"MiB Mem :\s+[\d\.]+\s+total,\s+[\d\.]+\s+free,\s+([\d\.]+)\s+used"
+    )
+
+    # Regex for the second format: CPU: 22.2% usr 74.0% sys  0.0% nic  0.0% idle...
+    cpu_format2_re = re.compile(r"CPU: .* (([\d\.]+)% idle)")
+    mem_format2_re = re.compile(r"Mem: \d+K used, \d+K free")
+
+    entries = re.split(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\+\-]\d{2}:\d{2})", content)
 
     for i in range(1, len(entries), 2):
         timestamp_str = entries[i]
@@ -60,21 +71,29 @@ def parse_system_log(log_file):
             timestamp = datetime.fromisoformat(timestamp_str)
             timestamps.append(timestamp)
 
-            # System CPU and Memory
-            cpu_match = re.search(r"%Cpu\(s\):\s+([\d\.]+) us,.*,\s+([\d\.]+) ni", data_block)
-            if cpu_match:
-                us_cpu = float(cpu_match.group(1))
-                ni_cpu = float(cpu_match.group(2))
-                cpu_usage.append(us_cpu + ni_cpu)
+            # Try parsing format 1
+            cpu_match = cpu_format1_re.search(data_block)
+            mem_match = mem_format1_re.search(data_block)
+            if cpu_match and mem_match:
+                idle_cpu = float(cpu_match.group(1))
+                wa_cpu = float(cpu_match.group(2))
+                cpu_usage.append(100 - idle_cpu - wa_cpu)
+                mem_usage.append(float(mem_match.group(1)))
             else:
-                cpu_usage.append(None)
+                # Try parsing format 2
+                cpu_match = cpu_format2_re.search(data_block)
+                mem_match = mem_format2_re.search(data_block)
+                if cpu_match:
+                    idle_cpu = float(cpu_match.group(2))
+                    cpu_usage.append(100 - idle_cpu)
+                    # For format 2, memory is in KB, so we convert to MB
+                    mem_data = re.search(r"Mem: (\d+)K used", data_block)
+                    mem_usage.append(float(mem_data.group(1)) / 1024 if mem_data else None)
+                else:
+                    cpu_usage.append(None)
+                    mem_usage.append(None)
 
-            mem_match = re.search(
-                r"MiB Mem :\s+[\d\.]+\s+total,\s+[\d\.]+\s+free,\s+([\d\.]+)\s+used", data_block
-            )
-            mem_usage.append(float(mem_match.group(1)) if mem_match else None)
-
-            # Resymot CPU and Memory
+            # Resymot CPU and Memory (assuming this format is consistent)
             resymot_cpu_match = re.search(r"Total resymot\.AppImage CPU: ([\d\.]+) %", data_block)
             resymot_cpu.append(float(resymot_cpu_match.group(1)) if resymot_cpu_match else 0)
 
@@ -97,7 +116,7 @@ def plot_line_charts(timestamps, cpu_usage, mem_usage, resymot_cpu, resymot_mem,
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
     # Plot CPU usage
-    ax1.plot(timestamps, cpu_usage, marker="o", linestyle="-", label="System CPU (us + ni)")
+    ax1.plot(timestamps, cpu_usage, marker="o", linestyle="-", label="System CPU (Active)")
     ax1.plot(timestamps, resymot_cpu, marker="x", linestyle="--", label="resymot CPU")
     ax1.set_title("CPU Usage Over Time")
     ax1.set_ylabel("CPU Usage (%)")
@@ -114,7 +133,7 @@ def plot_line_charts(timestamps, cpu_usage, mem_usage, resymot_cpu, resymot_mem,
     ax2.grid(True)
 
     plt.tight_layout()
-    plt.savefig(output_dir / "system_usage.png")
+    plt.savefig(output_dir / "system_usage.svg", format="svg")
 
 
 def main():
@@ -151,7 +170,7 @@ def main():
     passed, failed = analyze_logs(log_dir)
     if passed + failed > 0:
         plot_pie_chart(passed, failed, log_dir)
-        print(f"Pie chart saved to {log_dir / 'test_results.png'}")
+        print(f"Pie chart saved to {log_dir / 'test_results.svg'}")
     else:
         print("No test results found.")
 
@@ -162,7 +181,7 @@ def main():
             (timestamps, cpu, mem, r_cpu, r_mem) = parse_system_log(system_log_file)
             if timestamps:
                 plot_line_charts(timestamps, cpu, mem, r_cpu, r_mem, log_dir)
-                print(f"System usage charts saved to {log_dir / 'system_usage.png'}")
+                print(f"System usage charts saved to {log_dir / 'system_usage.svg'}")
             else:
                 print(f"Could not extract any system usage data from {system_log_file}.")
     except StopIteration:

@@ -172,3 +172,5 @@ files/config/secrets*
 
 requirements.txt
 .vscode/settings.json
+
+.ansible

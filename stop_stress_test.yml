@@ -12,9 +12,9 @@
           rm -f {{ logs_path }}/{{ item }}_monitor.pid
         fi
         # Kill any remaining monitoring processes using multiple methods
-        pkill -f "while true; do date; top -b -n 1; sleep"
+        pkill -f "while true; do date; busybox top -b -n 1; sleep"
         pkill -f "ssh.*while true"
-        pkill -f "ssh.*top -b"
+        pkill -f "ssh.*busybox top -b"
       register: monitor_kill
       failed_when: false
       loop: "{{ groups['stress_test_nodes'] }}"
@@ -109,7 +109,7 @@
           Stress test has been stopped.
 
           The following processes have been terminated:
-          1. System monitoring processes (sh -c while true; do date; top -b -n 1; sleep)
+          1. System monitoring processes (sh -c while true; do date; busybox top -b -n 1; sleep)
           2. Unit test processes (xyz_unittests)
           3. Resymot server processes (resymot.AppImage)
           4. CPU stress processes

@@ -1,18 +1,23 @@
 [project]
-dependencies    = [
+dependencies = [
     "requests>=2.28.0",
- "pyyaml>=6.0",
- "matplotlib>=3.10.3",
- "numpy>=2.2.6",
+    "pyyaml>=6.0",
+    "matplotlib>=3.10.3",
+    "numpy>=2.2.6",
 ]
-description     = "Ansible-based stress testing framework for Resymot applications"
-name            = "resymot-stress-test"
-readme          = "README.md"
+description = "Ansible-based stress testing framework for Resymot applications"
+name = "resymot-stress-test"
+readme = "README.md"
 requires-python = ">=3.10"
-version         = "0.1.0"
+version = "0.1.0"
 
 [dependency-groups]
-dev = ["ruff>=0.11.12,<0.12", "pytest>=8.3.5,<9", "ansible>=6.0.0"]
+dev = [
+    "ruff>=0.11.12,<0.12",
+    "pytest>=8.3.5,<9",
+    "ansible>=6.0.0",
+    "ansible-lint>=25.6.1",
+]
 
 [build-system]
 build-backend = "hatchling.build"
