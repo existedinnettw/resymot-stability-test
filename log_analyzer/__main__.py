@@ -40,10 +40,11 @@ def plot_pie_chart(passed_tests, failed_tests, output_dir):
 def parse_system_log(log_file):
     """
     Parses the system log file to extract CPU and memory usage for both system and resymot.
-    Handles multiple `top` output formats.
+    Handles busybox `top` output format.
     """
     timestamps = []
     cpu_usage = []
+    cpu_sys_usage = []
     mem_usage = []
     resymot_cpu = []
     resymot_mem = []
@@ -51,15 +52,8 @@ def parse_system_log(log_file):
     with open(log_file, "r") as f:
         content = f.read()
 
-    # Regex for the first format: %Cpu(s): 12.2 us,  7.6 sy,  0.0 ni, 80.2 id...
-    cpu_format1_re = re.compile(r"%Cpu\(s\):.*,\s+([\d\.]+) id,\s+([\d\.]+) wa")
-    mem_format1_re = re.compile(
-        r"MiB Mem :\s+[\d\.]+\s+total,\s+[\d\.]+\s+free,\s+([\d\.]+)\s+used"
-    )
-
-    # Regex for the second format: CPU: 22.2% usr 74.0% sys  0.0% nic  0.0% idle...
-    cpu_format2_re = re.compile(r"CPU: .* (([\d\.]+)% idle)")
-    mem_format2_re = re.compile(r"Mem: \d+K used, \d+K free")
+    # Regex for busybox top format: CPU: 22.2% usr 74.0% sys  0.0% nic  0.0% idle...
+    cpu_re = re.compile(r"CPU: .*?([\d\.]+)% sys .*?([\d\.]+)% idle")
 
     entries = re.split(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[\+\-]\d{2}:\d{2})", content)
 
@@ -71,27 +65,20 @@ def parse_system_log(log_file):
             timestamp = datetime.fromisoformat(timestamp_str)
             timestamps.append(timestamp)
 
-            # Try parsing format 1
-            cpu_match = cpu_format1_re.search(data_block)
-            mem_match = mem_format1_re.search(data_block)
-            if cpu_match and mem_match:
-                idle_cpu = float(cpu_match.group(1))
-                wa_cpu = float(cpu_match.group(2))
-                cpu_usage.append(100 - idle_cpu - wa_cpu)
-                mem_usage.append(float(mem_match.group(1)))
+            # Parse busybox top format
+            cpu_match = cpu_re.search(data_block)
+            if cpu_match:
+                sys_cpu = float(cpu_match.group(1))
+                idle_cpu = float(cpu_match.group(2))
+                cpu_usage.append(100 - idle_cpu)
+                cpu_sys_usage.append(sys_cpu)
+                # For format 2, memory is in KB, so we convert to MB
+                mem_data = re.search(r"Mem: (\d+)K used", data_block)
+                mem_usage.append(float(mem_data.group(1)) / 1024 if mem_data else None)
             else:
-                # Try parsing format 2
-                cpu_match = cpu_format2_re.search(data_block)
-                mem_match = mem_format2_re.search(data_block)
-                if cpu_match:
-                    idle_cpu = float(cpu_match.group(2))
-                    cpu_usage.append(100 - idle_cpu)
-                    # For format 2, memory is in KB, so we convert to MB
-                    mem_data = re.search(r"Mem: (\d+)K used", data_block)
-                    mem_usage.append(float(mem_data.group(1)) / 1024 if mem_data else None)
-                else:
-                    cpu_usage.append(None)
-                    mem_usage.append(None)
+                cpu_usage.append(None)
+                cpu_sys_usage.append(None)
+                mem_usage.append(None)
 
             # Resymot CPU and Memory (assuming this format is consistent)
             resymot_cpu_match = re.search(r"Total resymot\.AppImage CPU: ([\d\.]+) %", data_block)
@@ -106,10 +93,12 @@ def parse_system_log(log_file):
             print(f"Warning: Could not parse data for timestamp {timestamp_str}: {e}")
             continue
 
-    return timestamps, cpu_usage, mem_usage, resymot_cpu, resymot_mem
+    return timestamps, cpu_usage, cpu_sys_usage, mem_usage, resymot_cpu, resymot_mem
 
 
-def plot_line_charts(timestamps, cpu_usage, mem_usage, resymot_cpu, resymot_mem, output_dir):
+def plot_line_charts(
+    timestamps, cpu_usage, cpu_sys_usage, mem_usage, resymot_cpu, resymot_mem, output_dir
+):
     """
     Plots line charts for CPU and memory usage.
     """
@@ -117,6 +106,7 @@ def plot_line_charts(timestamps, cpu_usage, mem_usage, resymot_cpu, resymot_mem,
 
     # Plot CPU usage
     ax1.plot(timestamps, cpu_usage, marker="o", linestyle="-", label="System CPU (Active)")
+    ax1.plot(timestamps, cpu_sys_usage, marker="s", linestyle="-.", label="System CPU (Sys)")
     ax1.plot(timestamps, resymot_cpu, marker="x", linestyle="--", label="resymot CPU")
     ax1.set_title("CPU Usage Over Time")
     ax1.set_ylabel("CPU Usage (%)")
@@ -178,9 +168,9 @@ def main():
     try:
         system_log_file = next(log_dir.glob("*_system_log.txt"))
         if system_log_file.is_file():
-            (timestamps, cpu, mem, r_cpu, r_mem) = parse_system_log(system_log_file)
+            (timestamps, cpu, cpu_sys, mem, r_cpu, r_mem) = parse_system_log(system_log_file)
             if timestamps:
-                plot_line_charts(timestamps, cpu, mem, r_cpu, r_mem, log_dir)
+                plot_line_charts(timestamps, cpu, cpu_sys, mem, r_cpu, r_mem, log_dir)
                 print(f"System usage charts saved to {log_dir / 'system_usage.svg'}")
             else:
                 print(f"Could not extract any system usage data from {system_log_file}.")

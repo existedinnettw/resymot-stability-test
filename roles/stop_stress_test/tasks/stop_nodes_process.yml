@@ -1,0 +1,41 @@
+---
+- name: Kill any remaining resymot processes (AppImage)
+  ansible.builtin.shell: |
+    echo "Stopping resymot processes on $(hostname)..."
+    pkill -f "resymot"
+    sleep 3
+    pkill -9 -f "resymot"
+    echo "Resymot cleanup completed on $(hostname)"
+  register: resymot_kill
+  failed_when: false
+  ignore_errors: true
+  # Use a timeout to prevent hanging if pkill takes too long
+  timeout: 15
+
+- name: Show pkill result for resymot processes
+  ansible.builtin.debug:
+    msg: |
+      pkill exit code: {{ resymot_kill.rc }}
+      stdout: {{ resymot_kill.stdout }}
+      stderr: {{ resymot_kill.stderr }}
+  when: resymot_kill.rc != 0
+
+- name: Kill any remaining CPU stress processes
+  ansible.builtin.shell: |
+    echo "Stopping CPU stress processes on $(hostname)..."
+    pkill -f "cpu_stress"
+    sleep 1
+    pkill -9 -f "cpu_stress"
+    echo "CPU stress cleanup completed on $(hostname)"
+  register: cpustress_kill
+  failed_when: false
+  ignore_errors: true
+  timeout: 15
+
+- name: Show pkill result for CPU stress processes
+  ansible.builtin.debug:
+    msg: |
+      pkill exit code: {{ cpustress_kill.rc }}
+      stdout: {{ cpustress_kill.stdout }}
+      stderr: {{ cpustress_kill.stderr }}
+  when: cpustress_kill.rc != 0

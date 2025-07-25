@@ -1,7 +1,8 @@
 ---
 # Main stress test playbook - includes start, wait, and stop operations
 
-- hosts: localhost
+- name: Generate a timestamp for the logs directory
+  hosts: localhost
   gather_facts: false
 
   tasks:
@@ -10,11 +11,21 @@
         logs_path: "./logs/{{ lookup('pipe', 'date -Iseconds') }}"
       run_once: true # Ensures this task runs only once, even with multiple hosts
 
+- name: Resymot Stress Test Playbook
+  hosts: stress_test_nodes
+  become: true # sudo
+  roles:
+    - resymot_stress
+
 - name: Start Resymot Stress Test
-  import_playbook: start_stress_test.yml
+  hosts: localhost
   vars:
+    test_duration_hours: "{{ hostvars[groups['stress_test_nodes'][0]]['stress_duration_hours'] }}"
+    unittest_executable: "/home/morgana/resymot/build/Debug/tests/xyz_unittests"
     logs_path: "{{ logs_path }}"
-  ignore_errors: yes
+  roles:
+    - start_stress_test
+  ignore_errors: true
 
 - name: Wait for stress test duration and then stop
   hosts: stress_test_nodes
@@ -47,6 +58,32 @@
       when: stress_test_start_success | default(false)
 
 - name: Stop Resymot Stress Test
-  import_playbook: stop_stress_test.yml
+  hosts: localhost
   vars:
     logs_path: "{{ logs_path }}"
+  tasks:
+    - name: Stop local monitoring processes
+      ansible.builtin.import_role:
+        name: stop_stress_test
+        tasks_from: stop_local_process.yml
+
+- name: Stop Resymot Stress Test on target nodes
+  hosts: stress_test_nodes
+  vars:
+    logs_path: "{{ logs_path }}"
+  become: true
+  tasks:
+    - name: Stop process
+      ansible.builtin.import_role:
+        name: stop_stress_test
+        tasks_from: stop_nodes_process.yml
+
+- name: Display stop Resymot Stress Test
+  hosts: localhost
+  vars:
+    logs_path: "{{ logs_path }}"
+  tasks:
+    - name: Stop local monitoring processes
+      ansible.builtin.import_role:
+        name: stop_stress_test
+        tasks_from: final_display.yml

@@ -1,0 +1,17 @@
+---
+- name: Display cleanup information
+  ansible.builtin.debug:
+    msg: |
+      Stress test has been stopped.
+
+      The following processes have been terminated:
+      1. System monitoring processes (sh -c while true; do date; busybox top -b -n 1; sleep)
+      2. Unit test processes (xyz_unittests)
+      3. Resymot server processes (resymot.AppImage)
+      4. CPU stress processes
+
+      Log files are preserved in {{ logs_path }}/ directory:
+      {% for node in groups['stress_test_nodes'] %}
+      - {{ node }}_system_log.txt
+      {% endfor %}
+      - unit_tests.log

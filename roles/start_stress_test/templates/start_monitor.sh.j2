@@ -1,0 +1,27 @@
+#!/bin/sh
+while true; do
+  date -Iseconds
+  echo '=== System ==='
+  busybox top -b -n 1 | egrep 'CPU:|Mem:' | grep -v '^[ 0-9]'
+  echo '=== resymot.AppImage ==='
+  cpu_sum=$(busybox top -b -n 1 | grep resymot | awk '{sum+=$6} END {print sum}')
+  mem_mb=$(busybox ps -o pid,rss,comm | grep resymot | awk '
+    {
+      val = $2
+      if (val ~ /m$/) { sub(/m$/, "", val); total_kb += val * 1024 }
+      else if (val ~ /k$/) { sub(/k$/, "", val); total_kb += val }
+      else if (val ~ /^[0-9]+$/) { total_kb += val }
+      # else ignore
+    }
+    END { printf "%.2f", total_kb / 1024 }
+  ')
+  if [ -z "$cpu_sum" ] && [ -z "$mem_mb" ]; then
+    echo 'resymot.AppImage not running'
+  else
+    echo "Total resymot.AppImage CPU: $cpu_sum %"
+    echo "Total resymot.AppImage Memory: $mem_mb MB"
+  fi
+  echo
+
+  sleep {{ hostvars[item]['log_interval_seconds'] }}
+done

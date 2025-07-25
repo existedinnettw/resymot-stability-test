@@ -1,0 +1,53 @@
+---
+
+- name: Stop system monitoring processes
+  ansible.builtin.shell: |
+    if [ -f {{ logs_path }}/{{ item }}_monitor.pid ]; then
+      echo "Killing monitoring process $(cat {{ logs_path }}/{{ item }}_monitor.pid)"
+      kill $(cat {{ logs_path }}/{{ item }}_monitor.pid) 2>/dev/null || true
+      rm -f {{ logs_path }}/{{ item }}_monitor.pid
+    fi
+    # Kill any remaining monitoring processes using multiple methods
+    pkill -f "while true; do date; busybox top -b -n 1; sleep"
+    pkill -f "ssh.*while true"
+    pkill -f "ssh.*busybox top -b"
+  register: monitor_kill
+  failed_when: false
+  loop: "{{ groups['stress_test_nodes'] }}"
+  ignore_errors: true
+  timeout: 10
+
+- name: Show pkill result for monitoring processes
+  ansible.builtin.debug:
+    msg: |
+      pkill exit code: {{ item.rc }}
+      stdout: {{ item.stdout }}
+      stderr: {{ item.stderr }}
+  loop: "{{ monitor_kill.results }}"
+  when: item.rc != 0
+
+- name: Stop unit test process
+  ansible.builtin.include_tasks: roles/resymot_stress/tasks/stop_unittests.yml
+  vars:
+    mach_id: 1
+
+- name: Show pkill result for unit test processes
+  ansible.builtin.debug:
+    msg: |
+      pkill exit code: {{ unittest_kill.rc }}
+      stdout: {{ unittest_kill.stdout }}
+      stderr: {{ unittest_kill.stderr }}
+  when: unittest_kill.rc != 0
+
+- name: Stop unit test process (mach_id 2)
+  ansible.builtin.include_tasks: roles/resymot_stress/tasks/stop_unittests.yml
+  vars:
+    mach_id: 2
+
+- name: Show pkill result for unit test processes (mach_id 2)
+  ansible.builtin.debug:
+    msg: |
+      pkill exit code: {{ unittest_kill.rc }}
+      stdout: {{ unittest_kill.stdout }}
+      stderr: {{ unittest_kill.stderr }}
+  when: unittest_kill.rc != 0
